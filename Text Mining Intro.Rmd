@@ -1,0 +1,395 @@
+---
+title: "tm Versus tidytext"
+author: "Jill MacKay"
+date: "5 February 2018"
+output: 
+  html_document:
+    highlight: haddock
+    theme: spacelab
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+
+# About
+There are lots of resources out there about text mining (the [Julie Silge and David Robinson book](https://www.tidytextmining.com/) is probably the best resource I've found), but in playing about with these, there were challenges I came across which, for me, came back to some fundamental differences in translating qualitative data into quantitative data, and how R thinks about factors. The `tm` package and the `tidytext` package take two different approaches to this, and for the most part I've concluded `tidytext` is better. Here's why  . . .  
+
+# R Environment
+```{r}
+library(tidyverse)
+library(tidytext)
+library(tm)
+library(textstem)
+```
+
+# Example Data
+```{r}
+data <-  c("", 
+           "word1", 
+           "word1 word2",
+           "word1 word2 word3",
+           "word1 word2 word3 word4",
+           "word1 word2 word3 word4 word5")
+example <- c("Monkeys talk about feedback", 
+             "There are lots of animals who like feedback", 
+             "I like feedback too", 
+             "The biggest animal I can think of right now is the blue whale", 
+             "Cats love feedback but dogs hate feedback", 
+             "Cats hate assessment though even when dogs really love it", 
+             "Whales and dogs are ambivalent about marking", 
+             "Cats pay no attention to lectures", 
+             "Dogs pretend to listen", 
+             "Cats pretend not to listen" )
+```
+
+
+# Basic tm commands
+## Corpora
+```{r}
+data.c <- Corpus(VectorSource(data))
+example.c <- Corpus(VectorSource(example))
+
+```
+A corpus can be thought of as a document of documents. In this case, using the command `VectorSource` has each 'row' of the example data as a new document. If you have multiple big text files in a folder you can instead use the `DirSource` which will read all the documents in the directory it's pointed to. 
+
+Think of each document as an 'observation'. 
+
+
+## Document Term Matrices vs Term Document Matrices
+Tutorials often use these interchangeably, but there are times you want one, and times you want the other.
+
+The key difference is that `DocumentTermMatrix` has documents listed in the first **column**, `TermDocumentMatrix` has documents listed in the first **row**
+```{r}
+dtm.data <- DocumentTermMatrix(data.c)
+tdm.data <- TermDocumentMatrix(data.c)
+
+as.matrix(tdm.data)
+as.matrix(dtm.data)
+
+```
+
+### Using Document Term Matrices for Frequency
+You can explore datasets quickly using document term matrices. It is easier to do this via a `TermDocumentMatrix` as the `DocumentTermMatrix` is 
+```{r}
+#DocumentTermMatrix
+dtm.m <- as.matrix(dtm.data)
+dtm.v <- sort(rowSums(dtm.m), decreasing = TRUE)
+dtm.d <- data.frame(word = names(dtm.v), freq = dtm.v)
+head(dtm.d, 10)
+
+# TermDocumentMatrix
+tdm.m <- as.matrix(tdm.data)
+tdm.v <- sort(rowSums(tdm.m), decreasing = TRUE)
+tdm.d <- data.frame(word = names(tdm.v), freq = tdm.v)
+head(tdm.d, 10)
+
+```
+
+## Exploring Frequency with tm Commands
+There are a few interesting commands in the `tm` package which are frequently found in tutorials but have their own caveats. 
+
+Note that these functions appear to give similar results whether carried out on `Document Term Matrix` or `Term Document Matrix`
+
+```{r}
+#Find the top 3 terms
+findFreqTerms(dtm.data, 3)
+findFreqTerms(tdm.data, 3)
+
+#Find correlations above 0 with Word 1 (Pearson correlations, 0 is lower limit)
+findAssocs(dtm.data, "word1", 0)
+findAssocs(tdm.data, "word1", 0)
+```
+
+
+The `findAssocs` function gave me a lot of heartache. It works like so:
+```{r}
+# Remind yourself what this data looks like
+dtm.m
+tdm.m
+
+# Correlate Word1 with Word2 (Sticking with Document Term Matrix)
+cor(as.matrix(dtm.data)[,"word1"], as.matrix(dtm.data)[,"word2"])
+
+#This is the same as manually correlating the first two columns in dtm.m
+cor(c(0,1,1,1,1,1), c(0,0,1,1,1,1))
+```
+
+Here we finally run into a place where the `DocumentTermMatrix` is valuable, because if you want to correlate manually the document term matrix is much better. 
+
+
+
+# Moving on to tidytext
+Let's learn the `tidytext` package!
+
+## The tidy Command
+Immediately we start seeing some advantages of the `tidytext` package as suddenly we no longer need to worry about our `Document Term Matrix` versus our `Term Document Matrix`. The `tidy` commands makes a very similar tibble for both. 
+
+
+```{r}
+data_tb <- tibble(text = data)
+
+#This command unnests all the words so every word is on a new row sequentially
+data_tb_un <- data_tb %>%
+    unnest_tokens(word, text)
+
+
+```
+
+
+## Using tm for Frequency Analysis
+
+```{r}
+data_freq <- data_tb_un %>%
+  count (word, sort =TRUE)
+data_freq
+```
+
+Like all tidyverse stuff, this can be built up in oniony layers
+
+```{r}
+data_freq <- data_tb_un %>%
+  count(word, sort = TRUE) %>%
+  top_n (3)
+data_freq
+
+```
+
+
+
+This can also be visualised like so:
+```{r}
+data_freq <- data_tb_un %>%
+  count(word, sort = TRUE) %>%
+  top_n (3) %>%
+  ungroup() %>%
+  mutate(text_order = nrow(.):1)
+
+
+ggplot (data = data_freq, aes(reorder(word, text_order), n)) +
+  geom_bar (stat = "identity") +
+  labs(x = "Word", y= "Frequency in 'data'") +
+  coord_flip()+
+  theme_light()
+```
+
+
+## Word Associations via n-grams
+This time, instead of creating a tibble where each word is on a different row, we are going to create a tibble where each row is a sequential pair of words (bigrams). This creats repetition, in the first two rows of the new tibble `data_eng` there is an overlap, row1-column2's 'word1' is the same as row2-column1's 'word1' (this will become more clear in a realistic dataset)
+
+```{r}
+
+data_eng <- data_tb %>%
+    unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+data_eng
+```
+
+
+We can count the bigrams in the same was as before
+
+```{r}
+bigramcount <- data_eng %>%
+  count (bigram, sort = TRUE)
+bigramcount
+
+ggplot (data = bigramcount, aes(x = (reorder(bigram,n)), y = n)) +
+  geom_bar (stat = "identity") +
+  labs(x = "Bigram", y= "Frequency in 'data'") +
+  coord_flip()+
+  theme_light()
+
+```
+
+
+# Exploring More Realistic Data
+As with all analysis, text mining is only as good as the interpretation you put on it. Here, I see some considerable advantages of `tidytext` over the `tm` package, which only became clear to me after trying this out on a 'proper' dataset. 
+
+
+## Exploring it the tm Way
+```{r}
+dtm.example <- DocumentTermMatrix(example.c)
+print ("Term Document Matrix")
+head(as.matrix(TermDocumentMatrix(example.c)))
+print ("Three most frequent terms")
+findFreqTerms(dtm.example, 3)
+print("Correlations with 'feedback'")
+findAssocs(dtm.example, "feedback", 0)
+```
+
+With this more realistic data we can see some of the problems with `findAssocs` - namely that "monkeys" has a moderate correlation with "feedback" (r = 0.25), despite only appearing once in the whole dataset, while "cats" has no correlation with "feedback" despite also appearing in one document with "feedback". 
+
+The manual correlation for this can be seen here:
+```{r}
+as.matrix(DocumentTermMatrix(example.c))
+
+# Let's correlate 'feedback' with 'cats'
+cor(c(1,1,1,0,2,0,0,0,0,0), c(0, 0,0,0,1,1,0,1,0,1))
+
+```
+
+This is the big fundamental challenge of exploring text via corpora - **the 'document' is an observation.** 
+
+
+## Exploring it the tidytext way
+Instead of using a corpus, we load the data in a tibble
+```{r}
+example_tb <- tibble(text = example)
+example_tb_un <- example_tb %>%
+  unnest_tokens(word, text)
+```
+
+Note that the `unnest` function has also converted all the text to lower case (this can be changed with the `to_lower = FALSE` argument, but I wouldn't recommend that)
+
+```{r}
+head(example_tb)
+head(example_tb_un)
+```
+
+In this instance, the `example_tb_un` is putting all the words together - we will want to group these by respondent. 
+
+```{r}
+example_tb <- add_column (example_tb, respondent = 1:10)
+example_tb <- example_tb %>%
+  mutate(respondent = str_c("A", str_pad(respondent, 3, "left", "0")))
+example_tb_un <- example_tb %>%
+  unnest_tokens(word, text)
+example_tb_un$respondent <- as.factor(example_tb_un$respondent)
+
+example_tb_un
+```
+Now we can see what words belong (sequentially) to what comment. 
+
+### Stop Words
+With a real example we want to take an intermediate step in the data and lose the stop words. This can also be done in the `tm` package, but as the `tm` package deals with corpora, we need a way of doing this in  `tidytext`. The function `anti_join` will do this nicely, telling R not to join the words on the common English stop words list (e.g. the, a, it, etc.). 
+
+```{r}
+example_freq <- example_tb_un %>%
+  anti_join(stop_words) %>%
+  count(word, sort = TRUE) %>%
+  top_n (10) %>%
+  mutate(text_order = nrow(.):1) %>%
+  ggplot(aes(reorder(word, text_order), n)) +
+  geom_bar (stat = "identity") +
+  labs (x = "Word", y = "Frequency in example data") +
+  coord_flip() +
+  theme_light()
+example_freq
+
+```
+
+Or we can also do this by respondent ... (there would be data confidentiality issues doing this usually, but it's a good way to demonstrate a grouping factor)
+
+```{r}
+
+example_tb_un %>%
+  anti_join(stop_words) %>%
+  group_by (respondent) %>%
+  count(word, sort = TRUE) %>%
+  top_n (10) %>%
+  ungroup() %>%
+  mutate(text_order = nrow(.):1) %>%
+  ggplot(aes(reorder(word, text_order), n)) +
+  geom_bar (stat = "identity") +
+  labs (x = "Word", y = "Frequency in example data") +
+  coord_flip() +
+    facet_wrap(~ respondent, scales = "free_y") +
+  theme_light()
+```
+
+### Lemmatisation
+You'll notice that in the above, 'whale' and 'whales' both exist as individual words, as do 'animal' and 'animals'. We can use the `lemmatise_strings` function to deal with this. This is another package (`textstem`) but again, works nicely with `tidytext` as it doesn't rely on corpora. 
+
+```{r}
+example_tb_un$lemword <- lemmatize_strings(example_tb_un$word)
+example_tb_un
+
+all_freqs <- example_tb_un %>%
+  anti_join(stop_words) %>%
+  count(lemword, sort = TRUE) %>%
+  top_n (10) %>%
+  mutate(text_order = nrow(.):1) %>%
+  ggplot(aes(reorder(lemword, text_order), n)) +
+  geom_bar (stat = "identity") +
+  labs (x = "Word", y = "Frequency in example data") +
+  coord_flip() +
+  theme_light()
+all_freqs
+
+freqs_by_respondent <- example_tb_un %>%
+  anti_join(stop_words) %>%
+  group_by (respondent) %>%
+  count(lemword, sort = TRUE) %>%
+  top_n (10) %>%
+  ungroup() %>%
+  mutate(text_order = nrow(.):1) %>%
+  ggplot(aes(reorder(lemword, text_order), n)) +
+  geom_bar (stat = "identity") +
+  labs (x = "Word", y = "Frequency in example data") +
+  coord_flip() +
+    facet_wrap(~ respondent, scales = "free_y") +
+  theme_light()
+freqs_by_respondent
+
+
+```
+
+
+
+
+
+
+
+## n grams
+Let's look again at ngrams, this time with our more realistic dataset and what we know of stopwords. 
+
+
+```{r}
+bigram_ex <- example_tb %>%
+  unnest_tokens(bigram, text, token = "ngrams", n=2)
+bigram_ex$respondent <- as.factor(bigram_ex$respondent)
+
+bigram_ex
+
+#Most Common Bi-grams
+bigram_ex %>%
+  count (bigram, sort = TRUE)
+
+
+```
+Now let's filter out stop words, this is a little uglier than `tm`'s function, but better results. 
+
+```{r}
+
+bigram_ex %>%
+  separate (bigram, c("word1", "word2"), sep = " ") %>%
+  filter (!word1 %in% stop_words$word,
+          !word2 %in% stop_words$word) %>%
+  count(word1, word2, sort = TRUE)
+```
+
+And of course we can lemmatise these words and visualise too . . . 
+
+```{r}
+bigram_ex$lembigram <- lemmatize_strings(bigram_ex$bigram)
+
+
+bigramfreq <- bigram_ex %>%
+  separate (lembigram, c("word1", "word2"), sep = " ") %>%
+  filter (!word1 %in% stop_words$word,
+          !word2 %in% stop_words$word) %>%
+  count(word1, word2, sort = TRUE) %>%
+  unite("lembigram", c(word1,word2), sep = " ") %>%
+  top_n (10)
+bigramfreq
+
+ggplot(data = bigramfreq, aes(x = (reorder(lembigram, n)), y = n)) +
+  geom_bar (stat = "identity") +
+  labs (x = "Word", y = "Frequency in example data") +
+  coord_flip() +
+  theme_light()
+
+```
+
+
+
+

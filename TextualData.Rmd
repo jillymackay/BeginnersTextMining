@@ -6,7 +6,7 @@ output: slidy_presentation
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(tidy = TRUE, tidy.opts=list(blank=FALSE, width.cutoff=60))
 library(tidyverse)
 library(tidytext)
 library(gutenbergr)
@@ -19,7 +19,7 @@ All 'data science' does is condense *lots of data* into a *smaller bit of data*.
 
 
 For example:
-```{r, echo = TRUE}
+```{r}
 lots.of.data <- runif(100, min = 0, max = 100)
 ```
 
@@ -30,7 +30,17 @@ All 'data science' does is condense *lots of data* into a *smaller bit of data*.
 
 If I asked you to interpret that data, you would *not* say:
 
-```{r, echo = TRUE}
+```{r, eval = FALSE}
+print(lots.of.data)
+```
+## A Fundamental Assertion
+
+All 'data science' does is condense *lots of data* into a *smaller bit of data*. 
+
+
+If I asked you to interpret that data, you would *not* say:
+
+```{r}
 print(lots.of.data)
 ```
 
@@ -39,7 +49,7 @@ print(lots.of.data)
 
 To interpret *lots of data* you would instead likely do something like:
 
-```{r, echo = TRUE}
+```{r}
 mean(lots.of.data)
 sd(lots.of.data)
 
@@ -51,16 +61,14 @@ sd(lots.of.data)
 
 To interpret *lots of data* you would instead likely do something like:
 
-```{r, echo = TRUE}
+```{r}
 mean(lots.of.data)
 sd(lots.of.data)
 
 ```
 
-Any more debate is simply quibbling over methodology. 
-
-```{r, echo = TRUE}
-#e.g. Median
+The rest is just quibbling over methodology (which is extremely fun to do!)
+```{r}
 median(lots.of.data)
 
 
@@ -78,7 +86,7 @@ lotta.text <- lotta.text %>%
 
 ```
 
-```{r, echo = TRUE}
+```{r}
 print(lotta.text)
 ```
 
@@ -94,13 +102,24 @@ There are three main ways to analyse textual data in R
 The `tm` package is about 'text mining' and treats text as a 'corpus' (or many 'corpora').
 
 The basic command is:
-```{r, echo = TRUE}
+```{r}
 tm.text <- Corpus(VectorSource(lotta.text))
 ```
 
+Where `Corpus` reads in the data.
+
+`VectorSource` tells `Corpus` to expect the source file to be in a vector format. 
+
+
 
 ## The tm Package
-A corpus can be thought of as a document of documents. In this case, using the command `VectorSource` has each 'row' of the example data as a new document. If you have multiple big text files in a folder you can instead use the `DirSource` which will read all the documents in the directory it's pointed to. 
+A corpus can be thought of as a document of documents. 
+
+In this case, using the command `VectorSource` has each 'row' of the example data as a new document. 
+
+If you have multiple big text files in a folder you can use `DirSource` as opposed to `VectorSource`
+
+`DirSource` will read all the documents in the directory it's pointed to. 
 
 Think of each document as an 'observation'. 
 
@@ -110,12 +129,11 @@ Tutorials often use these interchangeably, but there are times you want one, and
 
 The key difference is that `DocumentTermMatrix` has documents listed in the first **column**, `TermDocumentMatrix` has documents listed in the first **row**
 ```{r}
-dtm.data <- DocumentTermMatrix(tm.text)
 tdm.data <- TermDocumentMatrix(tm.text)
+head(as.matrix(tdm.data))
 
-as.matrix(tdm.data)
-as.matrix(dtm.data)
-
+dtm.data <- DocumentTermMatrix(tm.text)
+head(as.matrix(dtm.data))
 ```
 
 ## Using Document Term Matrices for Frequency

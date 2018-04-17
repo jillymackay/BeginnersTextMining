@@ -1,0 +1,152 @@
+---
+title: "Textual Data"
+author: "Jilly MacKay"
+date: "17 April 2018"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidytext)
+library(gutenbergr)
+library(tm)
+```
+
+## A Fundamental Assertion
+
+All 'data science' does is condense *lots of data* into a *smaller bit of data*. 
+
+
+For example:
+```{r, echo = TRUE}
+lots.of.data <- runif(100, min = 0, max = 100)
+```
+
+## A Fundamental Assertion
+
+All 'data science' does is condense *lots of data* into a *smaller bit of data*. 
+
+
+If I asked you to interpret that data, you would *not* say:
+
+```{r, echo = TRUE}
+print(lots.of.data)
+```
+
+
+## Dealing with Lots of Data
+
+To interpret *lots of data* you would instead likely do something like:
+
+```{r, echo = TRUE}
+mean(lots.of.data)
+sd(lots.of.data)
+
+```
+
+
+
+## Dealing with Lots of Data
+
+To interpret *lots of data* you would instead likely do something like:
+
+```{r, echo = TRUE}
+mean(lots.of.data)
+sd(lots.of.data)
+
+```
+
+Any more debate is simply quibbling over methodology. 
+
+```{r, echo = TRUE}
+#e.g. Median
+median(lots.of.data)
+
+
+```
+
+
+## Textual Data
+
+In the same way, if you have a large chunk of text, you do not 'analyse' it by saying ...
+
+```{r, include = FALSE}
+lotta.text <- gutenberg_download(31847)
+lotta.text <- lotta.text %>%
+  select (-gutenberg_id)
+
+```
+
+```{r, echo = TRUE}
+print(lotta.text)
+```
+
+
+## Textual Data
+There are three main ways to analyse textual data in R
+
+* As corpora (`tm`)
+* As tidytext (`tidytext`)
+* Thematically (`RQDA`)
+
+## The tm Package
+The `tm` package is about 'text mining' and treats text as a 'corpus' (or many 'corpora').
+
+The basic command is:
+```{r, echo = TRUE}
+tm.text <- Corpus(VectorSource(lotta.text))
+```
+
+
+## The tm Package
+A corpus can be thought of as a document of documents. In this case, using the command `VectorSource` has each 'row' of the example data as a new document. If you have multiple big text files in a folder you can instead use the `DirSource` which will read all the documents in the directory it's pointed to. 
+
+Think of each document as an 'observation'. 
+
+
+## Document Term Matrices vs Term Document Matrices
+Tutorials often use these interchangeably, but there are times you want one, and times you want the other.
+
+The key difference is that `DocumentTermMatrix` has documents listed in the first **column**, `TermDocumentMatrix` has documents listed in the first **row**
+```{r}
+dtm.data <- DocumentTermMatrix(tm.text)
+tdm.data <- TermDocumentMatrix(tm.text)
+
+as.matrix(tdm.data)
+as.matrix(dtm.data)
+
+```
+
+## Using Document Term Matrices for Frequency
+You can explore datasets quickly using document term matrices. It is easier to do this via a `TermDocumentMatrix` as the `DocumentTermMatrix` is 
+```{r}
+#DocumentTermMatrix
+dtm.m <- as.matrix(dtm.data)
+dtm.v <- sort(rowSums(dtm.m), decreasing = TRUE)
+dtm.d <- data.frame(word = names(dtm.v), freq = dtm.v)
+head(dtm.d, 10)
+
+# TermDocumentMatrix
+tdm.m <- as.matrix(tdm.data)
+tdm.v <- sort(rowSums(tdm.m), decreasing = TRUE)
+tdm.d <- data.frame(word = names(tdm.v), freq = tdm.v)
+head(tdm.d, 10)
+
+```
+
+## Exploring Frequency with tm Commands
+There are a few interesting commands in the `tm` package which are frequently found in tutorials but have their own caveats. 
+
+Note that these functions appear to give similar results whether carried out on `Document Term Matrix` or `Term Document Matrix`
+
+```{r}
+#Find the top 3 terms
+findFreqTerms(dtm.data, 3)
+findFreqTerms(tdm.data, 3)
+
+#Find correlations above 0 with Word 1 (Pearson correlations, 0 is lower limit)
+findAssocs(dtm.data, "dog", 0)
+findAssocs(tdm.data, "dog", 0)
+```
+

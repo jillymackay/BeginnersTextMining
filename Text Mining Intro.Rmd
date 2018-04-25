@@ -136,7 +136,7 @@ data_tb_un <- data_tb %>%
 ```
 
 
-## Using tm for Frequency Analysis
+## Using tidytext for Frequency Analysis
 
 ```{r}
 data_freq <- data_tb_un %>%
@@ -174,7 +174,7 @@ ggplot (data = data_freq, aes(reorder(word, text_order), n)) +
 
 
 ## Word Associations via n-grams
-This time, instead of creating a tibble where each word is on a different row, we are going to create a tibble where each row is a sequential pair of words (bigrams). This creats repetition, in the first two rows of the new tibble `data_eng` there is an overlap, row1-column2's 'word1' is the same as row2-column1's 'word1' (this will become more clear in a realistic dataset)
+This time, instead of creating a tibble where each word is on a different row, we are going to create a tibble where each row is a sequential pair of words (bigrams). This creates repetition, in the first two rows of the new tibble `data_eng` there is an overlap, row1-column2's 'word1' is the same as row2-column1's 'word1' (this will become more clear in a realistic dataset)
 
 ```{r}
 

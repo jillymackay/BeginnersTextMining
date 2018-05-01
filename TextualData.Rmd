@@ -105,10 +105,10 @@ There are three main ways to analyse textual data in R
 
 (*Lets use a simpler example than `lottatext`*)
 
-```{r}
+```{r, tidy = FALSE}
 data <-  c("", 
-           "word1", 
-           "word1 word2",
+           "word1",  
+           "word1 word2", 
            "word1 word2 word3",
            "word1 word2 word3 word4",
            "word1 word2 word3 word4 word5")
@@ -250,7 +250,7 @@ ggplot (data = data_freq, aes(reorder(word, text_order), n)) +
   geom_bar (stat = "identity") +
   labs(x = "Word", y= "Frequency in 'data'") +
   coord_flip()+
-  theme_light()
+  theme_classic()
 ```
 
 ## Word Associations via n-grams
@@ -274,7 +274,13 @@ We can count the bigrams in the same was as before
 bigramcount <- data_eng %>%
   count (bigram, sort = TRUE)
 bigramcount
+```
 
+## Word Associations via n-grams
+
+We can count the bigrams in the same was as before
+
+```{r}
 ggplot (data = bigramcount, aes(x = (reorder(bigram,n)), y = n)) +
   geom_bar (stat = "identity") +
   labs(x = "Bigram", y= "Frequency in 'data'") +
@@ -282,3 +288,25 @@ ggplot (data = bigramcount, aes(x = (reorder(bigram,n)), y = n)) +
   theme_light()
 
 ```
+
+
+## RQDA
+`RQDA` is a package which allows R to 'code' free-text data. 'Coding' in this context, means 'categorising'. 
+
+R cannot thematically analyse text **for** you. It can only organise your categories. 
+
+`RQDA` is available [here - http://rqda.r-forge.r-project.org/](http://rqda.r-forge.r-project.org/). There are a few intermediary steps to installing `RQDA`, as it requires GTK+ to work. 
+
+## RQDA
+
+We're going to use a document which is freely available from the Gutenberg Project, (Dog Stories from the Spectator)[http://www.gutenberg.org/ebooks/31847].
+
+```{r, eval = FALSE}
+#To open RQDA
+RQDA()
+```
+
+A new window will open ...
+
+
+## RQDA

@@ -10,5 +10,7 @@ Why I prefer `tidytext` to `tm` can be found [here](https://rawgit.com/jillymack
 
 Still to do:  
 * Worked example of natural text mining 
+* Worked html step-by-step RQDA
 * Wordle visualisations (plus dos and don'ts)
+
 

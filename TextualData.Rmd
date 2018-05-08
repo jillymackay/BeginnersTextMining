@@ -383,3 +383,7 @@ At the end of the day, all three methods have their strengths.
 * Qualitative analysis is really the only way to explore the linkages of themes. 
 
 Happy text mining!
+
+## Fin
+
+*FIN*

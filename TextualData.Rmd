@@ -369,7 +369,8 @@ A new window will open ...
 
 ![Once the code is created, highlight the text, ensure the correct code is highlighted, and click 'mark'](Images\cap11.png)
 
-##RQDA
+
+## RQDA
 
 You can then pull up all the text within a given code and code within or review that text. 
 

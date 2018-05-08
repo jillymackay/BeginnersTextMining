@@ -1,0 +1,241 @@
+---
+title: "Wordles for Visualisations"
+author: "Jilly MacKay"
+date: "9 June 2018"
+output: 
+  html_document:
+    theme: cosmo
+    highlight: pygment
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+```{r, include = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+
+# Wordles for Visualisations
+Like a lot of people, I think I was first introduced to wordles via that old Java-powered website that would take a chunk of text and arrange the words into various silhouettes. I remember using a wordle to demonstrate the number of terms people use to describe 'animal personality' in the scientific literature at an ISAE conference in 2012, and getting some questions about how I made my pretty graphic. 
+
+There are a few key considerations about wordles:
+
+* What 'token' are you going to visualise?
+  - Visualising words is different from visualising lemmas
+* What will you use to weight the visualisation?
+  - You will likely need to explain the weighting to your audience
+* Are you characterising a text or comparing different texts?
+
+I really like wordles, but I do think that their availability has meant they've become more easily abused. 
+
+
+
+
+# The R Environment
+The wordle package I have most experience with is `wordcloud`, which can work with the `tm` package, but as [I much prefer](https://rawgit.com/jillymackay/BeginnersTextMining/master/Text_Mining_Intro.html) using `tidytext` I'm going to present a workflow that doesn't incorporate a corpus. 
+
+I also like using lemmatisation for text processing, which so I am including the `textstem` package.  
+
+For realistic text data we'll be sourcing from `janeaustenr` and you can find out more about that package [here](https://cran.r-project.org/web/packages/janeaustenr/index.html).
+
+
+```{r}
+library (tidyverse) 
+library (tidytext)
+library (wordcloud)
+library (textstem)
+library (janeaustenr) 
+```
+
+# A Basic Wordle Flow
+## The basic example
+Let's begin with a full on example of how Jane Austen used words across her whole bookography. In a few lines of code we're going to pull the Jane Austen text into an object called `austen`, group it by book, tokenise each book by 'word', lemmatise the words so we are only looking at the simplest form of the word, and get rid of common words (isn't the tidyverse wonderful?). 
+
+```{r}
+austen <- austen_books() %>%
+  group_by(book) %>%
+  mutate(linenumber = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                                                 ignore_case = TRUE)))) %>%
+  ungroup() %>%
+  unnest_tokens(word, text) %>%
+  mutate (lemma = (lemmatize_strings(word))) %>%
+  anti_join(stop_words)
+```
+
+Let's make the prettiest visualisation we can. (Actually, if I was going to get really het up about the prettiness of this I would encourage the use of the `wesanderson` palette, but one step at a time):
+
+```{r}
+austen %>%
+  count (lemma) %>%
+  with (wordcloud(words = lemma, freq = n, max.words = 200, random.order = FALSE, rot.per = 0,
+                  colors = brewer.pal(12, "Paired"), use.r.layout = FALSE))
+```
+
+A few words on my choices here:
+
+* `words = lemma` - I've chosen to plot the individual words but the lemmas, the basic 'units' of the word. 
+* `random.order = FALSE` - you can plot words randomly, which works if you don't particularly want to show weighting. But most of the time, you want to demonstrate something about word importance. 
+* `rot.per = 0` - This simply asks R to plot each word horizontally. I can never understand why people want rotation in a wordle visualisation. You immediately needlessly make it harder to read certain parts of your visualisation. 
+* `use.r.layout = FALSE` - this uses c++ to detect collisions. I find without this your wordles will lose chunks.
+
+## Comparing Texts
+We can compare different texts using the `comparison.cloud` which I am rapidly becoming a fan of. Let's use it here to compare lemmas versus words to demonstrate why I think this is important. Of course, we'll need to rearrange our data a little bit to get there.
+
+
+```{r}
+austen %>%
+  gather (key = Token, value = Text, word:lemma, factor_key = TRUE) %>%
+  count (Text, Token, sort = TRUE) %>%
+  reshape2::acast(Text ~ Token, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("#533366", 	"#E9967A"), max.words = 150, 
+                   rot.per = 0, use.r.layout = FALSE)
+```
+
+We see here immediately there are differences between the frequencies of the words and the lemmas. The top 150 words include **'meant'** and **'means'**, whereas we can only say **'mean'** within the lemmas. You might argue that only by looking at the *words* do you get a proper understanding of of the number of misunderstandings that occur within a typical Jane Austen story, and how often characters must clarify their **'feelings'** (another word that is much more common than its lemma **'feel'**). However, this understanding only comes from knowing the texts themselves I'd say. It's only as you imagine Elinor Dashwood clarifying what she meant to say do you understand how these words became so frequently used. 
+
+I would say that the *lemmas* are telling us a bit more about how important communication is in Jane Austen texts, but I think one of the things this immediately shows is how challenging it is to try and infer something about a body of text just by how often certain words are used. 
+
+Comparison clouds can also be used to visualise differences between multiple groups, but they become ugly and confusing very quickly:
+
+```{r}
+austen %>%
+  count (lemma, book, sort = TRUE) %>%
+  reshape2::acast(lemma ~ book, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = brewer.pal(15, "Paired"), max.words = 50, 
+                   rot.per = 0, use.r.layout = FALSE)
+```
+
+
+### Does It Have to be Frequency?
+Wordles don't *have* to visualise the frequency of a given word. I quite like looking at term frequency - inverse document frequencies. TF-IDF is a measure of how unique a word is to a particular document (or author/year, whatever you want to group by) in comparison to other documents within the set. It's explained much better in the [tidytext book]().
+
+First, we need to slightly rearrange our data:
+````{r}
+tf_idf_austen <- austen_books() %>%
+  unnest_tokens(word, text) %>%
+  mutate (lemma = (lemmatize_strings(word))) %>%
+  anti_join(stop_words) %>%
+  count(book, lemma, sort = TRUE) %>%
+  ungroup()
+
+total_words <- tf_idf_austen %>% 
+  group_by(book) %>% 
+  summarize(total = sum(n))
+
+tf_idf_austen <- left_join(tf_idf_austen, total_words) %>%
+  bind_tf_idf(lemma, book, n)
+```
+
+And now we want to the difference in unique terms between two given texts. Let's compare **Persuasion** and **Emma**, which are pretty different, narratively speaking. 
+
+```{r}
+
+tf_idf_austen %>%
+  filter (book == c("Emma", "Persuasion")) %>%
+  reshape2::acast(lemma ~ book, value.var = "tf_idf", fill = 0) %>%
+  comparison.cloud(colors = brewer.pal(12, "Paired"), max.words = 100, 
+                   rot.per = 0, use.r.layout = FALSE)
+```
+
+
+# Breaking Wordles Down
+Let's start examining the basic `wordcloud` command with a sample dataset. 
+
+```{r}
+data <-  tibble (words = c("word1", "word1", "word2", "word1", "word2", "word3",
+           "word1", "word2", "word3", "word4",
+           "word1", "word2", "word3", "word4", "word5"))
+```
+
+The full options available in the `wordcloud` function are:
+
+```{r}
+data %>%
+  count(words) %>%
+  with (wordcloud(words = words, 
+                  freq = n, 
+                  scale = c(1,5),
+                  min.freq = 1, 
+                  max.words = Inf, 
+                  random.order = FALSE,
+                  random.color = FALSE,
+                  rot.per = 0, 
+                  colors = brewer.pal(5, "Paired"),
+                  ordered.colors = TRUE,
+                  use.r.layout = FALSE,
+                  fixed.asp = FALSE))
+```
+
+Contrast when we set `random.order=TRUE` and allow for rotated words:
+
+```{r}
+
+data %>%
+  count(words) %>%
+  with (wordcloud(words = words, 
+                  freq = n, 
+                  scale = c(3,7),
+                  min.freq = 1, 
+                  max.words = Inf, 
+                  random.order = TRUE,
+                  random.color = FALSE,
+                  rot.per = 0.25, 
+                  colors = brewer.pal(5, "Paired"),
+                  ordered.colors = TRUE,
+                  use.r.layout = FALSE))
+```
+
+All wordles need is a term and an associated number to use as a frequency. The 'word' can in fact be a phrase, or any form of string. For example, let's create a new dataset to scale popular film franchises by the number of films within them. With this example we don't need to `count` the words in between calling the dataframe and defining the wordle's attributes because we've already specified them. 
+
+```{r}
+Franchises <- tibble (FilmSeries = c("Star Wars", "Jurassic Park", "Indiana Jones", "Jaws", "Star Trek"),
+                 FilmNumbers = c(10, 5, 4, 4, 14))
+
+Franchises %>%
+  with (wordcloud (words = FilmSeries,
+                   freq = FilmNumbers,
+                   random.order = FALSE,
+                   random.color = FALSE,
+                   rot.per = 0,
+                   colors = brewer.pal(5, "Paired"),
+                   use.r.layout = FALSE))
+
+```
+
+With an example like this, you might ask yourself the most important question about wordles: 
+> why not just use a bar chart?
+
+
+```{r}
+Franchises %>%
+  ggplot (aes(x = reorder(FilmSeries, -FilmNumbers), y = FilmNumbers, fill = FilmSeries)) +
+  geom_bar(stat = "identity") +
+  labs (x = "Film Franchise", y = "Number of Films (as of a quick google in 2018)") +
+  theme_classic()
+```
+
+Wordles must use the same information that you would include in a bar chart, so what's the point of them? 
+
+I personally like to use wordles to illustrate a point I'm making about text. For example, let's look at some common phrases within *Pride and Prejudice* and *Northanger Abbey* which are my favourite Jane Austen books, and very different in themes. I've always thought Elizabeth would think very poorly of Catherine Morland who gets very caught up in her imaginary world of gothic intrigue (although Elizabeth is less innocent of this than she thinks). I also absolutely love Jane Austen's asides in *Northanger Abbey*, but all this is besides the point. 
+
+Let's split the text by an ngram, in this case, three-word groupings for no reason other than 3 is a nice number. 
+
+```{r}
+austen_ngrams <- austen_books() %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  mutate (lemma = lemmatize_strings(trigram)) 
+
+
+austen_ngrams %>%
+  filter (book == c("Pride & Prejudice", "Northanger Abbey"),
+          lemma != "NA") %>%
+  count (lemma, book, sort = TRUE) %>%
+  reshape2::acast(lemma ~ book, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = brewer.pal(12, "Pastel2"), max.words = 100,
+                   rot.per = 0, use.r.layout = FALSE)
+```
+
+And here, I could use this diagram to illustrate some differences in the text, such as the importance of family relations in *Pride and Predjudice*, or how everyone comments on Catherine's sweetness in *Northanger Abbey* - but none of this comes out of this visualisation. It comes from our knowledge of the core materials. 
+
+And *that's* my thoughts on wordles. 

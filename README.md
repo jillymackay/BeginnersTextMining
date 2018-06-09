@@ -7,7 +7,7 @@ A collection of thoughts and methods for text mining in R
 ## Resources
 Why I prefer `tidytext` to `tm` can be found [here](https://rawgit.com/jillymackay/BeginnersTextMining/master/Text_Mining_Intro.html).
 
-[Wordle Visualisations]()
+[Wordle Visualisations](https://rawgit.com/jillymackay/BeginnersTextMining/master/Wordles.html)
 
 Still to do:  
 * Worked example of natural text mining 

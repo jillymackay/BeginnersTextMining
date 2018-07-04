@@ -1,9 +1,9 @@
 require(tidyverse)
 require(tidytext)
 
-# I want a function to do the steps of the term frequency - inverse document frequency
-# I use this a lot. 
-
+# I want a function to shorten the sequence I use to calculate a Term Frequency-Inverse Document Frequency
+# Which is a step I use a lot. 
+# And as the great coders say - if you've written the same code 3 times, write a function for it. 
 
 # Sample Data
 
@@ -30,23 +30,26 @@ starwars <- starwars %>%
   bind_tf_idf(word, film, n)
 
 
-# Test
+
+# Pretty graphic for funsies - also, note that this set of text is so small 
+# we only have 2 words that are unique across the films' opening crawls
 starwars %>%
   arrange(desc(tf_idf)) %>%
   mutate(word = factor(word, levels = rev(unique(word)))) %>%
   group_by(film) %>%
-  top_n(3) %>%
+  top_n(2) %>%
   ungroup %>%
   ggplot(aes(word, tf_idf, fill = film)) +
   geom_col(show.legend = FALSE) +
   labs (x = NULL, y = "tf-idf") +
   facet_wrap(~film, ncol = 2, scales = "free") +
   coord_flip()
-# this is an ugly chart don't worry about it
 
 
-# My function:
 
+
+
+# My original function that gained traction on Twitter:
 quick_tf_idf <- function (data, word, grouping_factor) {
   qgv <- enquo(grouping_factor)
   word <- enquo(word)
@@ -59,23 +62,25 @@ quick_tf_idf <- function (data, word, grouping_factor) {
 }
 
 mytest <- quick_tf_idf (starwars1, word, film)
-
-# And my test:
-mytest %>%
-  arrange(desc(tf_idf)) %>%
-  mutate(word = factor(word, levels = rev(unique(word)))) %>%
-  group_by(film) %>%
-  top_n(3) %>%
-  ungroup %>%
-  ggplot(aes(word, tf_idf, fill = film)) +
-  geom_col(show.legend = FALSE) +
-  labs (x = NULL, y = "tf-idf") +
-  facet_wrap(~film, ncol = 2, scales = "free") +
-  coord_flip()
+# But I missed out the total n - oops!
 
 
-# My next task is getting this one to work:
-# i.e. have the function able to assume 'word' without being told
-# But I'm 
-starwars <- quick_tf_idf (starwars1, grouping_factor = film)
+# From the lovely Dana Seidel https://twitter.com/dpseidel/status/1014250506594598912
+# My only addition is that I added quotation marks around the defaul value for word
+# Otherwise tidyeval gets a headache. 
+dpseidelquick <- function (data, word = "word", grouping_factor) {
+  qgv <- enquo (grouping_factor)
+  word <- enquo (word)
+  data %>%
+    group_by(!!qgv) %>%
+    mutate (total = sum(n)) %>%
+    bind_tf_idf (., !!word, !!qgv, n)
+  
+}
+
+seideltest <- dpseidelquick(starwars1, grouping_factor = film)
+
+# And seideltest looks identical to starwars to me!
+# rstats Twitter is cool :D
+
 

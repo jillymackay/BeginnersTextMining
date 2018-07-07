@@ -1,9 +1,30 @@
 require(tidyverse)
 require(tidytext)
 
+
 # I want a function to shorten the sequence I use to calculate a Term Frequency-Inverse Document Frequency
 # Which is a step I use a lot. 
 # And as the great coders say - if you've written the same code 3 times, write a function for it. 
+
+# Updated function 07/07/2018
+# Allows for immediate work on a unnested dataset
+# Total n bit messed up right now - need to fix
+
+lazytf <- function (data, word = "word", grouping_factor) {
+  qgv <- enquo (grouping_factor)
+  word <- enquo (word)
+  data %>%
+    group_by(!!qgv) %>%
+    count (!!qgv, !!word, sort = TRUE) %>%
+    ungroup() %>%
+    mutate (total = sum(n)) %>%
+    bind_tf_idf (., !!word, !!qgv, n)
+ 
+}
+
+
+
+
 
 # Sample Data
 

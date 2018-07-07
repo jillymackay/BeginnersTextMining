@@ -9,10 +9,11 @@ Why I prefer `tidytext` to `tm` can be found [here](https://rawgit.com/jillymack
 
 [Wordle Visualisations](https://rawgit.com/jillymackay/BeginnersTextMining/master/Wordles.html)
 
+[Quick Term Frequency - Inverse Document Frequency](/tfidffunction.R)
+
 Still to do:  
 * Worked example of natural text mining 
 * Worked html step-by-step RQDA
-* Improve wordles in other resources
 
 
 

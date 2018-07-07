@@ -154,7 +154,7 @@ findAssocs(tdm.data, "word1", 0)
 ```
 
 ## Word Clouds
-People love to visualise text data with word clouds. `tm` works very well with `wordcloud` to do this (`wordcloud` expects data in Corpus format)
+People love to visualise text data with word clouds, which come from the package `wordcloud`, funnily enough.
 
 ```{r, eval = FALSE}
 wordle <- wordcloud(tm.text, scale = c(5,0.5), max.words = 10, random.order = FALSE, 
@@ -246,6 +246,15 @@ ggplot (data = bigramcount, aes(x = (reorder(bigram,n)), y = n)) +
   labs(x = "Bigram", y= "Frequency in 'data'") +
   coord_flip()+
   theme_light()
+
+```
+
+## Wordles With tidytext
+You can still use the `wordcloud` command with tidytext format data, you just need an extra step. 
+
+```{r, eval = FALSE}
+data_freq %>%
+  with (wordcloud(words = word, freq = n, random.order = FALSE, rot.per = 0, use.r.layout = FALSE))
 
 ```
 

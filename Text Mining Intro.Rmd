@@ -12,7 +12,7 @@ output:
 ---
 
 # About
-There are lots of resources out there about text mining (the [Julie Silge and David Robinson book](https://www.tidytextmining.com/) is probably the best resource I've found), but in playing about with these, there were challenges I came across which, for me, came back to some fundamental differences in translating qualitative data into quantitative data. The `tm` package and the `tidytext` package take two different approaches to this, and for the most part I've concluded `tidytext` is better. Here's why  . . .  
+There are lots of resources out there about text mining (the [Julia Silge and David Robinson book](https://www.tidytextmining.com/) is probably the best resource I've found), but in playing about with these, there were challenges I came across which, for me, came back to some fundamental differences in translating qualitative data into quantitative data. The `tm` package and the `tidytext` package take two different approaches to this, and for the most part I've concluded `tidytext` is better. Here's why  . . .  
 
 # R Environment
 ```{r}

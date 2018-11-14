@@ -1,0 +1,16 @@
+name: "Beginners Text Mining"
+output_dir: "docs"
+navbar:
+  title: "Beginners Text Mining"
+left:
+  - text: "Home"
+href: index.html
+- text: "Thinking about textual data analysis"
+href: textual-data.html
+- text: "tidytext vs tm packages"
+href: tm-vs-tidytext.html
+- text: "Worldes"
+href: wordles.html
+output:
+  html_document:
+  theme: cosmo

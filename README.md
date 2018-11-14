@@ -1,15 +1,15 @@
 # Beginners Text Mining
 A collection of thoughts and methods for text mining in R
 
-You can view this repository's site page [here](https://jillymackay.github.io/BeginnersTextMining/)
+
 
 ## Presentations
-[Thinking about textual data analysis](/textual-data.html)
+[Thinking about textual data analysis](https://jillymackay.github.io/BeginnersTextMining//textual-data.html)
 
 ## Resources
-Why I prefer `tidytext` to `tm` can be found [here](/tm-vs-tidytext.html).
+Why I prefer `tidytext` to `tm` can be found [here](https://jillymackay.github.io/BeginnersTextMining/tm-vs-tidytext.html).
 
-[Wordle Visualisations](/Wordles.html)
+[Wordle Visualisations](https://jillymackay.github.io/BeginnersTextMining/wordles.html)
 
 [Quick Term Frequency - Inverse Document Frequency](/tfidffunction.R)
 

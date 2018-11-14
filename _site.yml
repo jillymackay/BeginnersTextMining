@@ -13,4 +13,4 @@ href: tm-vs-tidytext.html
 href: wordles.html
 output:
   html_document:
-  theme: cosmo
+  theme: spacelab
